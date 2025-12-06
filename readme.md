@@ -17,7 +17,7 @@ PKI
 ## 프로그램 배포 과정 
 실행가능한 Jar 파일 기반 Docker Container 실행 
 
-0. Jar build
+0. Build Jar
          
          javac -d out $(find . -name "*.java")
             •   -d out: 컴파일된 클래스 파일을 "out" 디렉토리에 저장
@@ -29,12 +29,13 @@ PKI
             •   -C out .: out 디렉토리의 내용을 기준으로 JAR 파일 생성
          java -jar MyApp.jar [arg1] [arg2] ...
 
-1. Docker Image Build
+1. Build Docker Image
 
-2. Image Registry in Docker HUB
+2. Register Docker Image in Docker HUB
 
 
 ## 프로그램 실행
+0. Download Docker Image over Docker Hub
 1. Execute server.Server Container 
    
         docker run pki_server
