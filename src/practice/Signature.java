@@ -1,3 +1,5 @@
+package practice;
+
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -6,7 +8,7 @@ import java.security.*;
 import java.util.Base64;
 
 
-public class signature_test {
+public class Signature {
     static public void main(String[] args) {
         /* server code */
         /* Key 발급 */
