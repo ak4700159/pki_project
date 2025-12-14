@@ -31,13 +31,15 @@ public class Client {
         System.out.println("서버에 연결됨 : " + socket.getRemoteSocketAddress() + ", " + userName);
 
         SharedState state = new SharedState();
+        Cryptographer cryptographer = new Cryptographer();
+        Adaptor adaptor = new Adaptor(cryptographer, out);
         // 1) 읽기 스레드: 서버 -> 클라이언트 메시지 수신
-        Reader reader = new Reader(state, in);
+        Reader reader = new Reader(state, adaptor, in);
         reader.start();
 
         // 2) 쓰기 스레드: 콘솔 -> 서버로 메시지 전송
         out.println(String.format("%s,%s", userName, targetName));
-        Writer writer = new Writer(state, out);
+        Writer writer = new Writer(state, adaptor);
         writer.start();
 
         // 두 쓰레드가 종료될 때까지 대기

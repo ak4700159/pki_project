@@ -21,8 +21,10 @@ public class Reader extends Thread{
             // 서버가 종료되거나 상대방이 나간 경우 오류 발생(IOException)
             // 블락킹 방식으로 문자열이 전달될 대까지 대기
             while ((line = in.readLine()) != null) {
-
-                System.out.println("서버: " + line);
+                if(adaptor.receiveFromServer(line)) {
+                    // 상대방과 채팅 시작
+                    sharedState.set(MessageType.SECURE);
+                }
             }
         } catch (IOException e) {
             System.err.println("읽기 오류: " + e.getMessage());

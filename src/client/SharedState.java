@@ -10,7 +10,9 @@ public class SharedState {
 
     public synchronized void set(MessageType t) {
         recentMessageType = t;
-        notifyAll(); // 상태 변경 알림
+        if(recentMessageType == MessageType.SECURE) {
+            notifyAll(); // 상태 변경 알림
+        }
     }
 
     public synchronized MessageType get() {
@@ -18,7 +20,7 @@ public class SharedState {
     }
 
     public synchronized void check() {
-        while(recentMessageType == MessageType.WAIT){
+        while(recentMessageType != MessageType.SECURE){
             try {
                 wait();
             } catch (InterruptedException e) {
