@@ -50,14 +50,14 @@ public class Signature {
         /* client code */
         // 간단한 암복화 시나리오 (전자서명 시나리오)
         String plainText = "hello world!";
-        String encryptedText = "";
-        String decryptedText = "";
+        String encryptedText;
+        String decryptedText;
         try {
             Cipher cipher = Cipher.getInstance("RSA");
 
             // 개인키 이용 전자서명
             cipher.init(Cipher.ENCRYPT_MODE, privateKey);
-            encryptedText = Base64.getEncoder().encodeToString(cipher.doFinal(plainText.getBytes()));
+
             System.out.println("****encrypt****");
             System.out.println(encryptedText);
             System.out.println("****decrypt****");

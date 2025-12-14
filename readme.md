@@ -14,6 +14,15 @@ PKI
 5. 상대방에게 메시지를 전달할 때 상대방의 공개키로 암호화하고 메시지를 수신할 땐 자신의 개인키로 복화화한다.
 6. Bob과 Alice 한 명이라도 채팅 서버에서 이탈하면 시나리오는 종료
 
+## 환경 변수
+Client
+   - PRIVATE_KEY_PATH 
+
+Server
+   - PRIVATE_KEY_PATH
+   - PUBLIC_KEY_PATH
+   - 
+
 ## 프로그램 배포 과정 
 실행가능한 Jar 파일 기반 Docker Container 실행 
 
