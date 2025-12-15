@@ -46,8 +46,15 @@ public class Client {
         try {
             writer.join();
             reader.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        // 예외 감지 시 스레드 종료
+        } catch (Exception e) {
+            if(writer.isAlive()) {
+                writer.interrupt();
+            }
+            if(reader.isAlive()) {
+                reader.interrupt();
+            }
+            System.out.println("강제 종료");
         }
         socket.close();
     }

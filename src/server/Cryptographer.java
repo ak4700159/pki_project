@@ -1,4 +1,4 @@
-package client;
+package server;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;

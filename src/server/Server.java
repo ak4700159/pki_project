@@ -5,7 +5,7 @@ import java.io.*;
 import java.util.concurrent.*;
 
 public class Server {
-    public static void main(String[] args) throws IOException {
+    public void run(String[] args) throws IOException {
         int port = 1234;
         ServerSocket serverSocket = new ServerSocket(port);
         System.out.println("서버: 포트 " + port + " 에서 대기 중...");
@@ -41,7 +41,7 @@ public class Server {
                 System.err.println("쓰기 오류: " + e.getMessage());
             }
         });
-
+        serverSocket.close();
         // 서버를 종료하거나 소켓 닫을 로직은 필요 시 추가
     }
 }

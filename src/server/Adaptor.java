@@ -1,4 +1,6 @@
-package client;
+package server;
+
+import client.MessageType;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -24,13 +26,13 @@ public class Adaptor {
     * */
     public boolean receiveFromServer(String line) throws RuntimeException {
         String strMessageType = line.split("@")[0];
-        MessageType type = extractMessageType(strMessageType);
-        if(type.equals(MessageType.REGISTER)){
-            sendToServer(null, MessageType.REGISTER);
-        } else if(type.equals(MessageType.WAIT)){
+        client.MessageType type = extractMessageType(strMessageType);
+        if(type.equals(client.MessageType.REGISTER)){
+            sendToServer(null, client.MessageType.REGISTER);
+        } else if(type.equals(client.MessageType.WAIT)){
             System.out.println("Waiting for client...");
             // 대기
-        } else if(type.equals(MessageType.MATCH)){
+        } else if(type.equals(client.MessageType.MATCH)){
             String originalMessage = line.split("@")[1];
             String base64Signature = line.split("@")[2];
             // 서버로부터 전달받은 상대방의 인증서 검증
@@ -40,24 +42,24 @@ public class Adaptor {
             } else {
                 throw new RuntimeException("Server verification failed");
             }
-        } else if(type.equals(MessageType.SELECT)){
+        } else if(type.equals(client.MessageType.SELECT)){
             // yes or no 응답
             try (BufferedReader console = new BufferedReader(new InputStreamReader(System.in))) {
                 String input;
                 while ((input = console.readLine()) != null) {
                     input = input.trim();
                     if(input.equalsIgnoreCase("yes") || input.equalsIgnoreCase("no")) {
-                        sendToServer(input, MessageType.SELECT);
+                        sendToServer(input, client.MessageType.SELECT);
                         break;
                     }
                 }
             } catch (IOException e) {
                 System.err.println("쓰기 오류: " + e.getMessage());
             }
-        } else if(type.equals(MessageType.REJECT)){
+        } else if(type.equals(client.MessageType.REJECT)){
             System.out.println("Rejected your request");
             // 종료
-        } else if(type.equals(MessageType.SECURE)){
+        } else if(type.equals(client.MessageType.SECURE)){
             // 메시지 해석 후 출력
             String decryptedMessage = cryptographer.decrypt(line.split("@")[1]);
             System.out.println("Message decrypted: " + decryptedMessage);
@@ -73,18 +75,18 @@ public class Adaptor {
      * select@{response} : 결정 응답
      * secure@{message} : 암호화된 채널에서 통신
      * */
-    public void sendToServer(String message, MessageType type) throws RuntimeException {
-        if(type.equals(MessageType.REGISTER)){
+    public void sendToServer(String message, client.MessageType type) throws RuntimeException {
+        if(type.equals(client.MessageType.REGISTER)){
             String strMyPublicKey = cryptographer.createKeyPair();
             String encryptedMyPublicKey = cryptographer.encrypt(strMyPublicKey, false);
             out.println("register@" + encryptedMyPublicKey);
-        } else if(type.equals(MessageType.INIT)){
+        } else if(type.equals(client.MessageType.INIT)){
             String encryptedMessage = cryptographer.encrypt(message, false);
             out.println("init@" + encryptedMessage);
-        } else if(type.equals(MessageType.SELECT)){
+        } else if(type.equals(client.MessageType.SELECT)){
             String encryptedMessage = cryptographer.encrypt(message, false);
             out.println("select@" + encryptedMessage);
-        }else if(type.equals(MessageType.SECURE)){
+        }else if(type.equals(client.MessageType.SECURE)){
             String encryptedMessage = cryptographer.encrypt(message, true);
             out.println("secure@" + encryptedMessage);
         } else {
@@ -92,25 +94,25 @@ public class Adaptor {
         }
     }
 
-    private MessageType extractMessageType(String type) {
+    private client.MessageType extractMessageType(String type) {
         switch (type) {
             case "register" -> {
-                return MessageType.REGISTER;
+                return client.MessageType.REGISTER;
             }
             case "init" -> {
-                return MessageType.INIT;
+                return client.MessageType.INIT;
             }
             case "wait" -> {
-                return MessageType.WAIT;
+                return client.MessageType.WAIT;
             }
             case "match" -> {
-                return MessageType.MATCH;
+                return client.MessageType.MATCH;
             }
             case "select" -> {
-                return MessageType.SELECT;
+                return client.MessageType.SELECT;
             }
             case "secure" -> {
-                return MessageType.SECURE;
+                return client.MessageType.SECURE;
             }
         }
         return MessageType.WRONG;
