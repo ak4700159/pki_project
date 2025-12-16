@@ -21,6 +21,7 @@ public class Client {
         }
 
         // 서버와 소켓 통신
+        System.out.println("Connecting to " + ip + ":" + port);
         Socket socket = new Socket(ip, port);
         // Server -> Client Channel(byte -> char -> Buffer)
         BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -28,7 +29,7 @@ public class Client {
         //      PrintWriter.autoFlush : println 호출시 자동 전송
         PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
         // Thread pool 생성, 고정된 Task 수를 가짐
-        System.out.println("서버에 연결됨 : " + socket.getRemoteSocketAddress() + ", " + userName);
+        System.out.println("Connected : " + socket.getRemoteSocketAddress() + ", " + userName);
 
         SharedState state = new SharedState();
         Cryptographer cryptographer = new Cryptographer();
@@ -38,8 +39,7 @@ public class Client {
         reader.start();
 
         // 2) 쓰기 스레드: 콘솔 -> 서버로 메시지 전송
-        out.println(String.format("%s,%s", userName, targetName));
-        Writer writer = new Writer(state, adaptor);
+        Writer writer = new Writer(state, adaptor, userName, targetName);
         writer.start();
 
         // 두 쓰레드가 종료될 때까지 대기
@@ -54,7 +54,7 @@ public class Client {
             if(reader.isAlive()) {
                 reader.interrupt();
             }
-            System.out.println("강제 종료");
+            System.out.println("Client bye");
         }
         socket.close();
     }

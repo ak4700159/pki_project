@@ -30,4 +30,6 @@ bin/
 ### Mac OS ###
 .DS_Store
 
+### 추가 ##
 *.pem
+**/.env/**

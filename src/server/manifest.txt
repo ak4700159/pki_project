@@ -1,1 +1,1 @@
-Main-Class: server.Server
+Main-Class: server.Main

@@ -49,7 +49,8 @@ public class Cryptographer {
             throw new RuntimeException(e);
         } catch (RuntimeException e) {
             // 예외를 던지지 않음, 초기에는 초기화되어 있지 않을 가능성이 큼.
-            System.out.println("Not initialize My Private Key. Need to generate key pair.");
+            System.out.println("Server Private Key, Public Key Load Error. Please try again after debugging.");
+            System.exit(1);
         }
     }
 
@@ -110,10 +111,15 @@ public class Cryptographer {
         String base64PrivateKey;
         try {
             base64PrivateKey = new String(Files.readAllBytes(Paths.get(System.getenv("PRIVATE_KEY_PATH"))));
+            base64PrivateKey= base64PrivateKey.replaceAll("-----BEGIN (.*)-----", "")
+                                            .replaceAll("-----END (.*)-----", "")
+                                            .replaceAll("\\s", "");
         } catch (IOException e) {
             System.out.println("Private Key Not Initialized");
             throw new RuntimeException(e);
         }
+        System.out.println("Loading Server Private Key : ");
+        System.out.println(base64PrivateKey);
         byte[] keyBytes = Base64.getDecoder().decode(base64PrivateKey);
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -124,10 +130,15 @@ public class Cryptographer {
         String base64PublicKey;
         try {
             base64PublicKey = new String(Files.readAllBytes(Paths.get(System.getenv("PUBLIC_KEY_PATH"))));
+            base64PublicKey= base64PublicKey.replaceAll("-----BEGIN (.*)-----", "")
+                    .replaceAll("-----END (.*)-----", "")
+                    .replaceAll("\\s", "");
         } catch (IOException e) {
             System.out.println("Public Key Not Initialized");
             throw new RuntimeException(e);
         }
+        System.out.println("Loading Server Public Key : ");
+        System.out.println(base64PublicKey);
         byte[] keyBytes = Base64.getDecoder().decode(base64PublicKey);
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -135,7 +146,7 @@ public class Cryptographer {
     }
 
     public void saveClientPublicKey(String identityKey, String base64PublicKey) throws IOException, NullPointerException {
-        // 파일명 : {identity_key}.pem
+        // 파일명: {identity_key}.pem
         String normalized = base64PublicKey.replaceAll("\\s+", "");
         // 64자 단위 줄바꿈
         StringBuilder pemBody = new StringBuilder();

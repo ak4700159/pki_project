@@ -7,15 +7,19 @@ import java.io.InputStreamReader;
 public class Writer extends Thread{
     private final Adaptor adaptor;
     private final SharedState sharedState;
+    private final String clientId;
+    private final String targetId;
 
-    public Writer(SharedState state, Adaptor adaptor){
+    public Writer(SharedState state, Adaptor adaptor, String clientId, String targetId){
         this.sharedState = state;
         this.adaptor = adaptor;
+        this.clientId = clientId;
+        this.targetId = targetId;
     }
 
     @Override
     public void run() {
-        adaptor.sendToServer("kim@lee", MessageType.INIT);
+        adaptor.sendToServer(clientId + "@" + targetId, MessageType.INIT);
         sharedState.check();
         try (BufferedReader console = new BufferedReader(new InputStreamReader(System.in))) {
             String input;

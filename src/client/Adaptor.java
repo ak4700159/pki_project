@@ -75,17 +75,26 @@ public class Adaptor {
      * */
     public void sendToServer(String message, MessageType type) throws RuntimeException {
         if(type.equals(MessageType.REGISTER)){
-            String strMyPublicKey = cryptographer.createKeyPair();
+            String strMyPublicKey;
+            if(cryptographer.getStrMyPublicKey() == null) {
+                strMyPublicKey = cryptographer.createKeyPair();
+            } else {
+                strMyPublicKey = cryptographer.getStrMyPublicKey();
+            }
             String encryptedMyPublicKey = cryptographer.encrypt(strMyPublicKey, false);
+            System.out.println("Send to server REGISTER : " + message);
             out.println("register@" + encryptedMyPublicKey);
         } else if(type.equals(MessageType.INIT)){
             String encryptedMessage = cryptographer.encrypt(message, false);
+            System.out.println("Send to server INIT : " + message);
             out.println("init@" + encryptedMessage);
         } else if(type.equals(MessageType.SELECT)){
             String encryptedMessage = cryptographer.encrypt(message, false);
+            System.out.println("Send to server SELECT : " + message);
             out.println("select@" + encryptedMessage);
         }else if(type.equals(MessageType.SECURE)){
             String encryptedMessage = cryptographer.encrypt(message, true);
+            System.out.println("Send to server SECURE : " + message);
             out.println("secure@" + encryptedMessage);
         } else {
             throw new RuntimeException("Received Wrong Message Type...");
