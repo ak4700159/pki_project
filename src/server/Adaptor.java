@@ -1,118 +1,131 @@
 package server;
 
-import client.MessageType;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 
 public class Adaptor {
     private final Cryptographer cryptographer;
-    private final PrintWriter out;
+    private final SharedState state;
 
-    public Adaptor(Cryptographer cryptographer, PrintWriter out) {
+    public Adaptor(Cryptographer cryptographer, SharedState state) {
         this.cryptographer = cryptographer;
-        this.out = out;
+        this.state = state;
     }
 
-    /* 서버로부터 받을 수 있는 Message Type = @register, @wait, @match, @select, @secure(Reader)
-    * register@ :                   공개키 등록 메시지
-    * wait@ :                       채팅 상대방이 접속하지 않은 경우, 대기 메시지
-    * match@{the other public key}@{signature} :채팅 상대방과 매칭된 경우
-    * select@{identity key} :       내가 원하지 않은 상대방으로부터 채팅 요청이 온 경우
-    * secure@{message} :            암호화된 채널에서 통신
-    * reject@ :                     요청한 상대방과 대화 거절
+    /* 클라이언트로부터 받을 수 있는 Message Type = @register, @init, @secure, @select
     * */
-    public boolean receiveFromServer(String line) throws RuntimeException {
+    public String receiveFromClient(String line, String clientId, PrintWriter out) throws RuntimeException {
         String strMessageType = line.split("@")[0];
-        client.MessageType type = extractMessageType(strMessageType);
-        if(type.equals(client.MessageType.REGISTER)){
-            sendToServer(null, client.MessageType.REGISTER);
-        } else if(type.equals(client.MessageType.WAIT)){
-            System.out.println("Waiting for client...");
-            // 대기
-        } else if(type.equals(client.MessageType.MATCH)){
-            String originalMessage = line.split("@")[1];
-            String base64Signature = line.split("@")[2];
-            // 서버로부터 전달받은 상대방의 인증서 검증
-            if(cryptographer.verifyMessage(originalMessage, base64Signature, false)) {
-                cryptographer.receivePeerPublicKey(originalMessage);
-                return true;
-            } else {
-                throw new RuntimeException("Server verification failed");
-            }
-        } else if(type.equals(client.MessageType.SELECT)){
-            // yes or no 응답
-            try (BufferedReader console = new BufferedReader(new InputStreamReader(System.in))) {
-                String input;
-                while ((input = console.readLine()) != null) {
-                    input = input.trim();
-                    if(input.equalsIgnoreCase("yes") || input.equalsIgnoreCase("no")) {
-                        sendToServer(input, client.MessageType.SELECT);
-                        break;
-                    }
-                }
+        PrintWriter targetOut = state.getClientInfo(state.getDesired(clientId)).getOut();
+        MessageType type = extractMessageType(strMessageType);
+        // 등록메시지를 보낸 경우
+        if(type.equals(MessageType.REGISTER)){
+            try {
+                String base64PublicKey = line.split("@")[1];
+                String clientPublicKey = cryptographer.decrypt(base64PublicKey);
+                state.setPublicKey(clientId, clientPublicKey);
+                cryptographer.saveClientPublicKey(clientId, clientPublicKey);
+                interact(clientId, out, targetOut);
             } catch (IOException e) {
-                System.err.println("쓰기 오류: " + e.getMessage());
+                throw new RuntimeException(e);
             }
-        } else if(type.equals(client.MessageType.REJECT)){
-            System.out.println("Rejected your request");
-            // 종료
-        } else if(type.equals(client.MessageType.SECURE)){
-            // 메시지 해석 후 출력
-            String decryptedMessage = cryptographer.decrypt(line.split("@")[1]);
-            System.out.println("Message decrypted: " + decryptedMessage);
+        } else if(type.equals(MessageType.INIT)){
+            String initMessage = cryptographer.decrypt(line.split("@")[1]);
+            state.connectFirst(initMessage.split("@")[0], initMessage.split("@")[1]);
+            // 처음 접속한 경우 공개키 등록 요청
+            if(state.getClientInfo(clientId) == null) {
+                sendToClient("", MessageType.REGISTER, out);
+            // 상대방이 접속하지 않은 상황
+            } else if(state.getClientInfo(state.getDesired(clientId)) == null) {
+                sendToClient("", MessageType.WAIT, out);
+            } else {
+                interact(clientId, out, targetOut);
+            }
+            return initMessage.split("@")[0];
+        } else if(type.equals(MessageType.SECURE)){
+            // 클라이언트 간 공개키로 암호화된 메시지 전송
+            sendToClient(line.split("@")[1], MessageType.SECURE, targetOut);
+        } else if(type.equals(MessageType.SELECT)){
+            String response = cryptographer.decrypt(line.split("@")[1]);
+            // yes 또는 no 라고 답변하지 않은 경우.
+            if(!(response.equals("yes") || response.equals("no"))) {
+                sendToClient(state.getPublicKey(clientId), MessageType.SELECT, out);
+            // 요청 수락
+            } else if(response.equals("yes")) {
+                sendToClient(state.getPublicKey(state.getDesired(clientId)), MessageType.MATCH, out);
+                sendToClient(state.getPublicKey(clientId), MessageType.MATCH, targetOut);
+            // 요청 거절
+            } else {
+                sendToClient("", MessageType.WAIT, out);
+                sendToClient("", MessageType.REJECT, targetOut);
+            }
         } else {
             throw new RuntimeException("Received Wrong Message Type...");
         }
-        return false;
+        return clientId;
     }
 
-    /* 서버에 보낼 수 있는 Message Type = @register, @init, @select, @secure(Writer)
-     * init@{my identity key}@{the other client key} : 서버
-     * register@{public key} : 등록 메시지
-     * select@{response} : 결정 응답
-     * secure@{message} : 암호화된 채널에서 통신
+    /* 클라이언트로 보낼 수 있는 Message Type = @register, @wait, @match, @secure, @select, @reject
      * */
-    public void sendToServer(String message, client.MessageType type) throws RuntimeException {
-        if(type.equals(client.MessageType.REGISTER)){
-            String strMyPublicKey = cryptographer.createKeyPair();
-            String encryptedMyPublicKey = cryptographer.encrypt(strMyPublicKey, false);
-            out.println("register@" + encryptedMyPublicKey);
-        } else if(type.equals(client.MessageType.INIT)){
-            String encryptedMessage = cryptographer.encrypt(message, false);
-            out.println("init@" + encryptedMessage);
-        } else if(type.equals(client.MessageType.SELECT)){
-            String encryptedMessage = cryptographer.encrypt(message, false);
-            out.println("select@" + encryptedMessage);
-        }else if(type.equals(client.MessageType.SECURE)){
-            String encryptedMessage = cryptographer.encrypt(message, true);
-            out.println("secure@" + encryptedMessage);
+    public void sendToClient(String message, MessageType type, PrintWriter out) throws RuntimeException {
+        if(type.equals(MessageType.REGISTER)) {
+            String encryptedMessage = cryptographer.encrypt(message);
+            out.println("register@" + encryptedMessage);
+        } else if(type.equals(MessageType.WAIT)) {
+            out.println("wait@");
+        } else if(type.equals(MessageType.SELECT)) {
+            out.println("select@");
+        } else if(type.equals(MessageType.MATCH)) {
+            String signatureMessage = cryptographer.signMessage(message);
+            out.println("match@" + message + "@" + signatureMessage);
+        } else if(type.equals(MessageType.SECURE)) {
+            out.println("secure@" + message);
+        } else if(type.equals(MessageType.REJECT)) {
+            out.println("reject@");
         } else {
             throw new RuntimeException("Received Wrong Message Type...");
         }
     }
 
-    private client.MessageType extractMessageType(String type) {
+    private void interact(String clientId, PrintWriter out, PrintWriter targetOut) {
+        // 상대방 접속 X
+        if(state.checkMatch(clientId) == null) {
+            sendToClient("", MessageType.WAIT, out);
+        }
+        // 상대방이 접속했고 채팅하기를 원할 경우.
+        if(state.checkMatch(clientId)) {
+            sendToClient(state.getPublicKey(state.getDesired(clientId)), MessageType.MATCH, out);
+            sendToClient(state.getPublicKey(clientId), MessageType.MATCH, state.getClientInfo(state.getDesired(clientId)).getOut());
+        }
+        // 상대방이 접속은 했지만 다른 대화 상대를 지목한 경우.
+        else {
+            sendToClient("", MessageType.WAIT, out);
+            MessageType recentMessageType = state.clientInfoTable.get(state.desire.get(clientId)).getRecentMessageType();
+            if(recentMessageType.equals(MessageType.WAIT)) {
+                sendToClient("", MessageType.WAIT, targetOut);
+            }
+        }
+    }
+
+    private MessageType extractMessageType(String type) {
         switch (type) {
             case "register" -> {
-                return client.MessageType.REGISTER;
+                return MessageType.REGISTER;
             }
             case "init" -> {
-                return client.MessageType.INIT;
+                return MessageType.INIT;
             }
             case "wait" -> {
-                return client.MessageType.WAIT;
+                return MessageType.WAIT;
             }
             case "match" -> {
-                return client.MessageType.MATCH;
+                return MessageType.MATCH;
             }
             case "select" -> {
-                return client.MessageType.SELECT;
+                return MessageType.SELECT;
             }
             case "secure" -> {
-                return client.MessageType.SECURE;
+                return MessageType.SECURE;
             }
         }
         return MessageType.WRONG;

@@ -56,7 +56,7 @@ public class Adaptor {
             }
         } else if(type.equals(MessageType.REJECT)){
             System.out.println("Rejected your request");
-            // 종료
+            System.exit(1);
         } else if(type.equals(MessageType.SECURE)){
             // 메시지 해석 후 출력
             String decryptedMessage = cryptographer.decrypt(line.split("@")[1]);
@@ -111,6 +111,9 @@ public class Adaptor {
             }
             case "secure" -> {
                 return MessageType.SECURE;
+            }
+            case "reject" -> {
+                return MessageType.REJECT;
             }
         }
         return MessageType.WRONG;

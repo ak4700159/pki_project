@@ -8,5 +8,6 @@ public enum MessageType {
     SELECT,
     REJECT,
     SECURE,
-    WRONG
+    WRONG,
+    NONE
 }

@@ -102,29 +102,6 @@ public class Cryptographer {
         return encryptedText;
     }
 
-    // 메시지 서명(서버 파트에서 구현)
-//    public String signMessage(String message) {
-//        PrivateKey privateKey = myPrivateKey.get();
-//        if (privateKey == null) {
-//            throw new RuntimeException("PrivateKey not initialized");
-//        }
-//
-//        try {
-//            // SHA256 알고리즘으로 해싱된 값을 자신의 비밀키로 암호화
-//            Signature signature = Signature.getInstance("SHA256withRSA");
-//            // 비밀키 주입
-//            signature.initSign(privateKey);
-//            // 메시지 주입(바이트 단위)
-//            signature.update(message.getBytes(StandardCharsets.UTF_8));
-//            // 전자서명 추출
-//            byte[] signedBytes = signature.sign();
-//            // 전자서명 base64 인코딩
-//            return Base64.getEncoder().encodeToString(signedBytes);
-//        } catch (Exception e) {
-//            throw new RuntimeException("Signing failed", e);
-//        }
-//    }
-
     // base64 인코딩된 공개키 반환
     public String createKeyPair() throws RuntimeException {
         SecureRandom secureRandom = new SecureRandom(); // random number generator(RNG) 알고리즘 사용
@@ -163,16 +140,17 @@ public class Cryptographer {
         }
     }
 
-    private PublicKey loadServerPublicKey() throws NoSuchAlgorithmException, InvalidKeySpecException {
+    private PublicKey loadServerPublicKey() throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
         // 디코딩된 Server Public key(편의상 구현)
-        byte[] decoded = Base64.getDecoder().decode((
-                "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArIZ1HYktICf/tGvC1dfy\n" +
-                "X6mFAclnw4tFCHXZAMEiNm/SF2mIDWJfo05rMUgfZ6SDGlfidvB0vEOwNvfdFaDV\n" +
-                "ke03o9XbbXooWi8y+KTkSXn80FsFjzh8jHHIoQl5vMAcOKMInkzoyuZ1verDojz/\n" +
-                "OyNFh3syrgvblJq0hz12voz8J53Y/HR3CvZVRAYFjvEUz/p9AYecOzrMTKa3Q9pu\n" +
-                "PN+XUaPS18Zrynu/KSNEjk4t1yxJ6zeCxp1bvPK4z1IKu10w6IOsZHXurEN5Jrfw\n" +
-                "PpDN6wi4s159zFFNyXCT1xgS67RmUbW5ogSJDCJ6cnjz9v2Ok7yflAYVHUNLdZ4L\n" +
-                "YQIDAQAB").replace("\n", ""));
+        String base64ServerPublicKey;
+        try {
+            base64ServerPublicKey = new String(Files.readAllBytes(Paths.get(System.getenv("SERVER_PRIVATE_KEY_PATH"))));
+        } catch (IOException e) {
+            throw new IOException(e);
+        } catch (NullPointerException e) {
+            throw new NullPointerException("Not register Environment SERVER_PRIVATE_KEY_PATH");
+        }
+        byte[] decoded = Base64.getDecoder().decode(base64ServerPublicKey);
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decoded);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         return keyFactory.generatePublic(keySpec);
@@ -199,7 +177,7 @@ public class Cryptographer {
         } catch (IOException e) {
             throw new IOException(e);
         } catch (NullPointerException e) {
-            throw new NullPointerException("Not register Environment PRIVATE_KEY_PATH");
+            throw new NullPointerException("write failed. Not register Environment PRIVATE_KEY_PATH");
         }
     }
 }

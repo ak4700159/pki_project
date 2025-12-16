@@ -1,47 +1,40 @@
 package server;
 
-import java.net.*;
-import java.io.*;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
-    public void run(String[] args) throws IOException {
-        int port = 1234;
-        ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("서버: 포트 " + port + " 에서 대기 중...");
 
-        Socket socket = serverSocket.accept();
-        System.out.println("클라이언트 연결됨: " + socket.getRemoteSocketAddress());
+    private static final int THREAD_POOL_SIZE = 20;
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-
-        ExecutorService pool = Executors.newFixedThreadPool(2);
-
-        // 1) 읽기 스레드: 클라이언트 -> 서버 메시지 수신
-        pool.submit(() -> {
-            String line;
-            try {
-                while ((line = in.readLine()) != null) {
-                    System.out.println("클라이언트: " + line);
-                }
-            } catch (IOException e) {
-                System.err.println("읽기 오류: " + e.getMessage());
+    public void execute(String[] args) throws IOException {
+        if (args.length != 1) {
+            System.err.println("Usage: java server <port>");
+            throw new IllegalArgumentException("Wrong number of arguments");
+        }
+        int port;
+        try {
+            port = Integer.parseInt(args[0]);
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException("Port must be a number");
+        }
+        // 스레드풀 생성
+        ExecutorService pool = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        SharedState sharedState = new SharedState();
+        Cryptographer cryptographer = new Cryptographer();
+        // 서버 소켓 Open
+        try (ServerSocket serverSocket = new ServerSocket(port)) {
+            System.out.println("서버 시작: 포트 " + port);
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("클라이언트 연결됨: " + clientSocket.getRemoteSocketAddress());
+                pool.submit(new ClientHandler(clientSocket, cryptographer, sharedState));
             }
-        });
-
-        // 2) 쓰기 스레드: 서버 콘솔 -> 클라이언트로 메시지 전송
-        pool.submit(() -> {
-            try (BufferedReader console = new BufferedReader(new InputStreamReader(System.in))) {
-                String input;
-                while ((input = console.readLine()) != null) {
-                    out.println(input);
-                }
-            } catch (IOException e) {
-                System.err.println("쓰기 오류: " + e.getMessage());
-            }
-        });
-        serverSocket.close();
-        // 서버를 종료하거나 소켓 닫을 로직은 필요 시 추가
+        } finally {
+            pool.shutdown();
+        }
     }
 }
