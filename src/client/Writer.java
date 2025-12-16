@@ -19,15 +19,23 @@ public class Writer extends Thread{
 
     @Override
     public void run() {
-        adaptor.sendToServer(clientId + "@" + targetId, MessageType.INIT);
-        sharedState.check();
+        try {
+            adaptor.sendToServer(clientId + "@" + targetId, MessageType.INIT);
+            sharedState.check();
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+            return;
+        }
         try (BufferedReader console = new BufferedReader(new InputStreamReader(System.in))) {
             String input;
             while ((input = console.readLine()) != null) {
                 adaptor.sendToServer(input, MessageType.SECURE);
             }
         } catch (IOException e) {
-            System.err.println("쓰기 오류: " + e.getMessage());
+            System.err.println("Writer Error : " + e.getMessage());
+        } finally {
+            sharedState.set(MessageType.WRONG);
+            System.exit(1);
         }
     }
 }

@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 public class Adaptor {
     private final Cryptographer cryptographer;
     private final PrintWriter out;
+    private String clientId;
+    private String targetId;
 
     public Adaptor(Cryptographer cryptographer, PrintWriter out) {
         this.cryptographer = cryptographer;
@@ -34,7 +36,7 @@ public class Adaptor {
             String originalMessage = line.split("@")[1];
             String base64Signature = line.split("@")[2];
             // 서버로부터 전달받은 상대방의 인증서 검증
-            if(cryptographer.verifyMessage(originalMessage, base64Signature, false)) {
+            if(cryptographer.verifyMessage(originalMessage, base64Signature)) {
                 cryptographer.receivePeerPublicKey(originalMessage);
                 return true;
             } else {
@@ -60,7 +62,8 @@ public class Adaptor {
         } else if(type.equals(MessageType.SECURE)){
             // 메시지 해석 후 출력
             String decryptedMessage = cryptographer.decrypt(line.split("@")[1]);
-            System.out.println("Message decrypted: " + decryptedMessage);
+            System.out.println("[" + targetId + "]Message decrypted: " + decryptedMessage);
+            return true;
         } else {
             throw new RuntimeException("Received Wrong Message Type...");
         }
@@ -77,24 +80,29 @@ public class Adaptor {
         if(type.equals(MessageType.REGISTER)){
             String strMyPublicKey;
             if(cryptographer.getStrMyPublicKey() == null) {
+                // 이미 한 번 base64로 인코딩된 문자열(public key는 byte[]이기 때문에 표현상 인코딩)
                 strMyPublicKey = cryptographer.createKeyPair();
             } else {
+//                System.out.println("1. REGISTER POINT");
                 strMyPublicKey = cryptographer.getStrMyPublicKey();
             }
-            String encryptedMyPublicKey = cryptographer.encrypt(strMyPublicKey, false);
-            System.out.println("Send to server REGISTER : " + message);
+//            System.out.println("2. REGISTER POINT : " + strMyPublicKey);
+            String encryptedMyPublicKey = cryptographer.encrypt(strMyPublicKey, false, type);
+            System.out.println("Send to server REGISTER : " + encryptedMyPublicKey);
             out.println("register@" + encryptedMyPublicKey);
         } else if(type.equals(MessageType.INIT)){
-            String encryptedMessage = cryptographer.encrypt(message, false);
+            clientId = message.split("@")[0];
+            targetId = message.split("@")[1];
+            String encryptedMessage = cryptographer.encrypt(message, false, type);
             System.out.println("Send to server INIT : " + message);
             out.println("init@" + encryptedMessage);
         } else if(type.equals(MessageType.SELECT)){
-            String encryptedMessage = cryptographer.encrypt(message, false);
+            String encryptedMessage = cryptographer.encrypt(message, false, type);
             System.out.println("Send to server SELECT : " + message);
             out.println("select@" + encryptedMessage);
         }else if(type.equals(MessageType.SECURE)){
-            String encryptedMessage = cryptographer.encrypt(message, true);
-            System.out.println("Send to server SECURE : " + message);
+            String encryptedMessage = cryptographer.encrypt(message, true, type);
+            System.out.println("Send to server SECURE : " + encryptedMessage);
             out.println("secure@" + encryptedMessage);
         } else {
             throw new RuntimeException("Received Wrong Message Type...");

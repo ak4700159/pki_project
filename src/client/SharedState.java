@@ -10,18 +10,17 @@ public class SharedState {
 
     public synchronized void set(MessageType t) {
         recentMessageType = t;
-        if(recentMessageType == MessageType.SECURE) {
+        if(recentMessageType == MessageType.SECURE || recentMessageType == MessageType.WRONG) {
             notifyAll(); // 상태 변경 알림
         }
     }
 
-    public synchronized MessageType get() {
-        return recentMessageType;
-    }
-
-    public synchronized void check() {
+    public synchronized void check() throws RuntimeException{
         while(recentMessageType != MessageType.SECURE){
             try {
+                if(MessageType.WRONG == recentMessageType){
+                    throw new RuntimeException("Wrong MessageType");
+                }
                 wait();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);

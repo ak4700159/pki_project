@@ -44,8 +44,8 @@ public class Client {
 
         // 두 쓰레드가 종료될 때까지 대기
         try {
-            writer.join();
             reader.join();
+            writer.join();
         // 예외 감지 시 스레드 종료
         } catch (Exception e) {
             if(writer.isAlive()) {

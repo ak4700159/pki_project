@@ -42,12 +42,13 @@ public class Cryptographer {
         try {
             serverPublicKey = loadServerPublicKey();
             myPrivateKey = loadMyPrivateKey();
-            strMyPublicKey = Base64.getEncoder().encodeToString(myPrivateKey.getEncoded());
+            myPublicKey = loadMyPublicKey();
+            strMyPublicKey = Base64.getEncoder().encodeToString(myPublicKey.getEncoded());
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException(e);
         } catch (IOException e) {
             // 예외를 던지지 않음, 초기에는 초기화되어 있지 않을 가능성이 큼.
-            System.out.println("Not initialize My Private Key. Need to generate key pair.");
+            System.out.println("Not initialize My Keys. Need to generate key pair.");
         }
     }
 
@@ -68,24 +69,29 @@ public class Cryptographer {
         return decryptedText;
     }
 
-    // 메시지 검증
-    public boolean verifyMessage(String message, String base64Signature, boolean fromPeer) {
-        PublicKey publicKey = fromPeer ? peerPublicKey : serverPublicKey;
+    // 서버의 개인키로 서명한 다른 클라이언트 공개키 검증
+    public boolean verifyMessage(String message, String base64Signature) {
+        PublicKey publicKey = serverPublicKey;
         if (publicKey == null) {
-            throw new RuntimeException("PublicKey not initialized");
+            throw new RuntimeException("Server PublicKey not initialized");
         }
         try {
+            System.out.println("Verifying message : " + message);
             byte[] signatureBytes = Base64.getDecoder().decode(base64Signature);
+            // SHA256 알고리즘으로 해싱된 값을 서버의 공개로 암호화
             Signature signature = Signature.getInstance("SHA256withRSA");
+            // 서버 공개키 세팅
             signature.initVerify(publicKey);
+            // 원본 메시지 주입
             signature.update(message.getBytes(StandardCharsets.UTF_8));
+            // 검증
             return signature.verify(signatureBytes);
         } catch (Exception e) {
             throw new RuntimeException("Verification failed", e);
         }
     }
 
-    public String encrypt(String message, boolean toPeer) throws RuntimeException {
+    public String encrypt(String message, boolean toPeer, MessageType type) throws RuntimeException {
         if (!toPeer && serverPublicKey == null) throw new RuntimeException("Server Public Key not set");
         if (toPeer && peerPublicKey == null) throw new RuntimeException("Peer Public Key not set");
         Cipher cipher;
@@ -97,7 +103,12 @@ public class Cryptographer {
             } else {
                 cipher.init(Cipher.ENCRYPT_MODE, serverPublicKey);
             }
-            encryptedText = Base64.getEncoder().encodeToString(cipher.doFinal(message.getBytes(StandardCharsets.UTF_8)));
+            if(type.equals(MessageType.REGISTER)) {
+//                System.out.println("3. REGISTER POINT, " + Base64.getDecoder().decode(message).length);
+                return strMyPublicKey;
+            } else {
+                encryptedText = Base64.getEncoder().encodeToString(cipher.doFinal(message.getBytes(StandardCharsets.UTF_8)));
+            }
         } catch (IllegalBlockSizeException | BadPaddingException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException e) {
             throw new RuntimeException(e);
         }
@@ -124,6 +135,7 @@ public class Cryptographer {
         // 비밀키는 로컬에 저장
         try {
             writePrivateKeyToFile(privateKeyStr);
+            writePublicKeyToFile(publicKeyStr);
         } catch (IOException | NullPointerException e) {
             throw new RuntimeException(e);
         }
@@ -187,6 +199,26 @@ public class Cryptographer {
         return keyFactory.generatePrivate(keySpec);
     }
 
+    public static PublicKey loadMyPublicKey() throws NoSuchAlgorithmException, InvalidKeySpecException, IOException {
+        String base64MyKey;
+        try {
+            base64MyKey = new String(Files.readAllBytes(Paths.get(System.getenv("PUBLIC_KEY_PATH"))));
+            base64MyKey= base64MyKey.replaceAll("-----BEGIN (.*)-----", "")
+                    .replaceAll("-----END (.*)-----", "")
+                    .replaceAll("\\s", "");
+        } catch (IOException e) {
+            throw new IOException(e);
+        } catch (NullPointerException e) {
+            throw new NullPointerException("Not register Environment PRIVATE_KEY_PATH");
+        }
+        System.out.println("Loading My Public Key : ");
+        System.out.println(base64MyKey);
+        byte[] decodedKey = Base64.getDecoder().decode(base64MyKey);
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(keySpec);
+    }
+
     private void writePrivateKeyToFile(String base64Key) throws IOException, NullPointerException {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(System.getenv("PRIVATE_KEY_PATH")))) {
             writer.write(base64Key);
@@ -194,6 +226,16 @@ public class Cryptographer {
             throw new IOException(e);
         } catch (NullPointerException e) {
             throw new NullPointerException("write failed. Not register Environment PRIVATE_KEY_PATH");
+        }
+    }
+
+    private void writePublicKeyToFile(String base64Key) throws IOException, NullPointerException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(System.getenv("PUBLIC_KEY_PATH")))) {
+            writer.write(base64Key);
+        } catch (IOException e) {
+            throw new IOException(e);
+        } catch (NullPointerException e) {
+            throw new NullPointerException("write failed. Not register Environment PUBLIC_KEY_PATH");
         }
     }
 }

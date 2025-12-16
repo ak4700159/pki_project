@@ -15,7 +15,7 @@ public class Reader extends Thread{
     }
 
     @Override
-    public void run() {
+    public void run(){
         String line;
         try {
             // 서버가 종료되거나 상대방이 나간 경우 오류 발생(IOException)
@@ -23,12 +23,14 @@ public class Reader extends Thread{
             while ((line = in.readLine()) != null) {
                 // MATCH 타입 메시지를 전달받은 경우 true, 그 외 false
                 if(adaptor.receiveFromServer(line)) {
-                    // Writer 스레드 깨우기
                     sharedState.set(MessageType.SECURE);
                 }
             }
-        } catch (IOException e) {
-            System.err.println("읽기 오류: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Reader Error : " + e.getMessage());
+            sharedState.set(MessageType.WRONG);
+        } finally {
+            System.exit(1);
         }
     }
 }

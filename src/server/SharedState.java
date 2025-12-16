@@ -30,28 +30,22 @@ public class SharedState {
         return clientInfoTable.get(id).getPublicKey();
     }
 
-    public MessageType getRecentMessageType(String id) {
-        return clientInfoTable.get(id).getRecentMessageType();
-    }
-
     public void connectFirst(String sourceId, String targetId) {
         desire.put(sourceId, targetId);
-        if(clientInfoTable.containsKey(targetId)){
-            clientInfoTable.put(sourceId, new ClientInfo());
-        }
+        clientInfoTable.computeIfAbsent(sourceId, k -> new ClientInfo());
     }
 
     // 자신과 상대방이 서로를 기다리고 있는 확인
     public Boolean checkMatch(String clientId) {
         String targetId = desire.get(clientId);
         if(desire.get(targetId) == null) {
-            return null;
+            return false;
         }
         return Objects.equals(desire.get(targetId), clientId);
     }
 
-    public void setRecentMessage() {
-
+    public void setRecentMessage(String clientId, MessageType type) {
+        getClientInfo(clientId).setRecentMessageType(type);
     }
 
     public void setPublicKey(String clientId, String publicKey) {
@@ -71,11 +65,15 @@ public class SharedState {
                 .forEach(path -> {
                     try {
                         String clientId = path.getFileName().toString();
-                        String base64Key = Files.readString(path)
-                                .replaceAll("\\s+", "");
+                        String base64Key = Files.readString(path);
+                        base64Key = base64Key.replaceAll("-----BEGIN (.*)-----", "")
+                                .replaceAll("-----END (.*)-----", "")
+                                .replaceAll("\\s", "");
                         ClientInfo info = new ClientInfo();
                         info.setPublicKey(base64Key);
                         info.setRecentMessageType(MessageType.NONE);
+                        clientId = clientId.split("\\.")[0];
+                        System.out.println("Put Client information: " + clientId);
                         clientInfoTable.put(clientId, info);
                     } catch (Exception e) {
                         throw new RuntimeException("Failed to load public key from file: " + path, e);

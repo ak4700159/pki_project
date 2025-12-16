@@ -30,7 +30,7 @@ public class Server {
             System.out.println("Server Start! port: " + port);
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getRemoteSocketAddress());
+                System.out.println("============ Client connected: " + clientSocket.getRemoteSocketAddress() + " ============");
                 pool.submit(new ClientHandler(clientSocket, cryptographer, sharedState));
             }
         } finally {

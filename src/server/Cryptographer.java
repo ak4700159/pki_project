@@ -13,6 +13,7 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 
 /*
@@ -54,7 +55,7 @@ public class Cryptographer {
         }
     }
 
-    public String decrypt(String encryptedMessage) throws RuntimeException {
+    public String decrypt(String encryptedMessage, MessageType type) throws RuntimeException {
         if(serverPrivateKey == null) {
             throw new RuntimeException("Not Setting Server PrivateKey.");
         }
@@ -63,7 +64,13 @@ public class Cryptographer {
         try {
             cipher = Cipher.getInstance("RSA");
             cipher.init(Cipher.DECRYPT_MODE, serverPrivateKey);
-            byte[] base64Decrypted = Base64.getDecoder().decode(encryptedMessage);
+            byte[] base64Decrypted;
+            if(type.equals(MessageType.REGISTER)) {
+                System.out.println("Accept public key : " + encryptedMessage);
+                return encryptedMessage;
+            } else {
+                base64Decrypted = Base64.getDecoder().decode(encryptedMessage);
+            }
             decryptedText = new String(cipher.doFinal(base64Decrypted), StandardCharsets.UTF_8);
         } catch (IllegalBlockSizeException | BadPaddingException | InvalidKeyException | NoSuchAlgorithmException | NoSuchPaddingException e) {
             throw new RuntimeException(e);
@@ -85,19 +92,19 @@ public class Cryptographer {
         return encryptedText;
     }
 
-    // 메시지 서명
-    public String signMessage(String message) {
+    // 메시지 서명(공개키에 대해 서명)
+    public String signMessage(String base64PublicKey) {
         PrivateKey privateKey = serverPrivateKey;
         if (privateKey == null) {
             throw new RuntimeException("PrivateKey not initialized");
         }
         try {
-            // SHA256 알고리즘으로 해싱된 값을 자신의 비밀키로 암호화
+            // SHA256 알고리즘으로 해싱된 값을 서버의 비밀키로 암호화
             Signature signature = Signature.getInstance("SHA256withRSA");
             // 비밀키 주입
             signature.initSign(privateKey);
             // 메시지 주입(바이트 단위)
-            signature.update(message.getBytes(StandardCharsets.UTF_8));
+            signature.update(base64PublicKey.getBytes(StandardCharsets.UTF_8));
             // 전자서명 추출
             byte[] signedBytes = signature.sign();
             // 전자서명 base64 인코딩
@@ -112,8 +119,8 @@ public class Cryptographer {
         try {
             base64PrivateKey = new String(Files.readAllBytes(Paths.get(System.getenv("PRIVATE_KEY_PATH"))));
             base64PrivateKey= base64PrivateKey.replaceAll("-----BEGIN (.*)-----", "")
-                                            .replaceAll("-----END (.*)-----", "")
-                                            .replaceAll("\\s", "");
+                    .replaceAll("-----END (.*)-----", "")
+                    .replaceAll("\\s", "");
         } catch (IOException e) {
             System.out.println("Private Key Not Initialized");
             throw new RuntimeException(e);
