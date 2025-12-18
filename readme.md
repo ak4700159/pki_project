@@ -26,32 +26,38 @@ Server
 ## 프로그램 배포 과정 
 실행가능한 Jar 파일 기반 Docker Container 실행 
 
-0. Build Jar
+0. Generate executable Jar file
          
-         javac -d out $(find . -name "*.java")
-            •   -d out: 컴파일된 클래스 파일을 "out" 디렉토리에 저장
-            •   *.java: 컴파일 대상 Java 파일들(경로 지정 가능)
-         jar -cvfm MyApp.jar manifest.txt -C out .
-            •   -c: 새 JAR 파일 생성
-            •   -v: 생성 과정을 자세히 출력
-            •   -f MyApp.jar: 생성할 JAR 파일 이름 지정
-            •   -C out .: out 디렉토리의 내용을 기준으로 JAR 파일 생성
-         java -jar MyApp.jar [arg1] [arg2] ...
 
-1. Build Docker Image
+      javac -d out $(find . -name "*.java")
+         •   -d out: 컴파일된 클래스 파일을 "out" 디렉토리에 저장
+         •   *.java: 컴파일 대상 Java 파일들(경로 지정 가능)
+      jar -cvfm MyApp.jar manifest.txt -C out .
+         •   -c: 새 JAR 파일 생성
+         •   -v: 생성 과정을 자세히 출력
+         •   -f MyApp.jar: 생성할 JAR 파일 이름 지정
+         •   -C out .: out 디렉토리의 내용을 기준으로 JAR 파일 생성
+      java -jar MyApp.jar [arg1] [arg2] ...
+
+1. Build Docker Image and Run test
+
+
+      docker build -t pki-server
+      docker build -t pki-server 
+      docker run --rm --network pki-net --name client pki-client java -jar client.jar server 2000 kim lee
+      docker run --rm --network pki-net --name server -p 2000:2000 pki-server java -jar server.jar 2000
+
 
 2. Register Docker Image in Docker HUB
 
 
-## 프로그램 실행
+## 프로그램 실행 방법
 0. Download Docker Image over Docker Hub
-1. Execute server.Server Container 
-   
-        docker run pki_server
+2. Execute my pki server, client
 
-2. Execute client.Client Container * 2
 
-        docker run pki_client kim / docker run pki_client lee
+      docker run --rm --network pki-net --name client pki-client java -jar client.jar server 2000 kim lee
+      docker run --rm --network pki-net --name server -p 2000:2000 pki-server java -jar server.jar 2000
 
 ## 필요한 지식
 1. PKI

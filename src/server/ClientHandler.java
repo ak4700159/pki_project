@@ -41,7 +41,7 @@ public class ClientHandler implements Runnable {
         try {
             socket.close();
         } catch (IOException ignored) {}
-        state.clientInfoTable.remove(clientId);
+        state.closeConnection(clientId);
         state.desire.remove(clientId);
         System.out.println("============ ClientHandler exited : " + clientId + " ============");
     }

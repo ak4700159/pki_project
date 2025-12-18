@@ -46,19 +46,20 @@ public class Adaptor {
             state.connectFirst(newClientId, targetClientId);
             state.setRecentMessage(newClientId, type);
             // 처음 접속한 경우 공개키 등록 요청
-            if(info == null || info.getPublicKey() == null) {
+            if(info.getPublicKey() == null) {
                 System.out.println("Send to Client Register Message");
+                info.setRecentMessageType(MessageType.REGISTER);
                 sendToClient("", MessageType.REGISTER, out);
             // 상대방이 접속하지 않은 상황
-            } else if(targetInfo.getOut() == null) {
+            } else if(targetInfo == null || targetInfo.getOut() == null) {
                 System.out.println("Send to Client Wait Message");
+                info.setRecentMessageType(MessageType.WAIT);
                 sendToClient("", MessageType.WAIT, out);
             } else {
                 System.out.println("Execute Interact");
                 interact(newClientId, out, targetInfo.getOut());
             }
             return newClientId;
-
         } else if(type.equals(MessageType.SECURE)){
             state.setRecentMessage(clientId, type);
             System.out.println( "[" + clientId + "] -> " + "[" + state.getDesired(clientId) + "] SECURE");
@@ -115,14 +116,22 @@ public class Adaptor {
     }
 
     private void interact(String clientId, PrintWriter out, PrintWriter targetOut) {
+        if(targetOut == null) {
+            System.out.println("The other client not online");
+            state.setRecentMessage(clientId, MessageType.WAIT);
+            sendToClient("", MessageType.WAIT, out);
+            return;
+        }
         // 상대방이 접속했고 채팅하기를 원할 경우.
         if(state.checkMatch(clientId)) {
             System.out.println("Matching Success!");
             // 서로의 개인키를 전달
+            state.setRecentMessage(clientId, MessageType.MATCH);
             sendToClient(state.getPublicKey(state.getDesired(clientId)), MessageType.MATCH, out);
+            state.setRecentMessage(state.getDesired(clientId), MessageType.MATCH);
             sendToClient(state.getPublicKey(clientId), MessageType.MATCH, state.getClientInfo(state.getDesired(clientId)).getOut());
         }
-        // 상대방이 접속은 했지만 다른 대화 상대를 지목한 경우.
+        // 상대방은 접속했지만 다른 대화 상대를 원하는 경우
         else {
             System.out.println("상대방은 접속했지만 다른 대화 상대를 원하는 경우");
             sendToClient("", MessageType.WAIT, out);
@@ -130,7 +139,7 @@ public class Adaptor {
             ClientInfo targetInfo = state.getClientInfo(targetId);
             MessageType recentMessageType = targetInfo.getRecentMessageType();
             if(recentMessageType.equals(MessageType.WAIT)) {
-                sendToClient("", MessageType.WAIT, targetOut);
+                sendToClient("", MessageType.SELECT, targetOut);
             }
         }
     }

@@ -7,7 +7,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-
     private static final int THREAD_POOL_SIZE = 20;
 
     public void execute(String[] args) throws IOException {

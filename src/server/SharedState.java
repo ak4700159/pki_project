@@ -35,6 +35,11 @@ public class SharedState {
         clientInfoTable.computeIfAbsent(sourceId, k -> new ClientInfo());
     }
 
+    public void closeConnection(String clientId) {
+        ClientInfo info = getClientInfo(clientId);
+        info.setOut(null);
+    }
+
     // 자신과 상대방이 서로를 기다리고 있는 확인
     public Boolean checkMatch(String clientId) {
         String targetId = desire.get(clientId);

@@ -28,7 +28,9 @@ public class ClientInfo{
         this.recentMessageType = recentMessageType;
     }
 
-    public PrintWriter getOut() { return out; }
+    public PrintWriter getOut() {
+        return out;
+    }
 
     public MessageType getRecentMessageType() {
         return recentMessageType;

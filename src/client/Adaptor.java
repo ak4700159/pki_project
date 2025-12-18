@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 public class Adaptor {
     private final Cryptographer cryptographer;
     private final PrintWriter out;
-    private String clientId;
     private String targetId;
 
     public Adaptor(Cryptographer cryptographer, PrintWriter out) {
@@ -91,7 +90,7 @@ public class Adaptor {
             System.out.println("Send to server REGISTER : " + encryptedMyPublicKey);
             out.println("register@" + encryptedMyPublicKey);
         } else if(type.equals(MessageType.INIT)){
-            clientId = message.split("@")[0];
+//            clientId = message.split("@")[0];
             targetId = message.split("@")[1];
             String encryptedMessage = cryptographer.encrypt(message, false, type);
             System.out.println("Send to server INIT : " + message);
